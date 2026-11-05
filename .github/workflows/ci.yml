@@ -23,4 +23,5 @@ jobs:
       - name: Run lint
         run: npm run lint
       - name: Build production app
+        if: always()
         run: npm run build
