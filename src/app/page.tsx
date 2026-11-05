@@ -1,5 +1,6 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 type Evaluation = { decision: "approved" | "needs_approval" | "rejected"; reasons: string[]; policySnapshot: { maxSinglePaymentUsd: number; dailyBudgetUsd: number; spentTodayUsd: number; approvalAboveUsd: number } };
 const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 export default function Home() {
