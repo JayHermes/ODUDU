@@ -8,7 +8,7 @@ Odudu is built around one rule: an AI agent may propose a financial action, but 
 
 This first slice contains a deterministic TypeScript policy engine independent of any model, a server-side `POST /api/transactions/evaluate` endpoint with request validation, a small web interface for testing payment requests, and unit tests for approval, escalation and rejection cases.
 
-**This prototype does not connect to a wallet, NEAR, NEAR Intents, a TEE, a database or an LLM. It does not move funds.** The policy values are hard-coded demo values and are not production security controls.
+**This prototype does not connect to a wallet, TEE, database or LLM. It does not move funds.** The policy values are hard-coded demo values and are not production security controls. A read-only NEAR Intents quote-preview adapter has now been added for Tidepool, but it is not connected to payment authorization or settlement.
 
 ## Stack
 
@@ -28,7 +28,20 @@ npm run dev
 
 Open http://localhost:3000.
 
-Run tests with `npm test`; build with `npm run build`.
+Run tests with `npm test`; lint with `npm run lint`; build with `npm run build`. GitHub Actions runs all three checks on pushes and pull requests.
+
+## NEAR Intents quote preview
+
+The repository includes two server-side routes:
+
+- `GET /api/intents/tokens` retrieves the supported token list from Tidepool.
+- `POST /api/intents/quote` requests an `EXACT_INPUT` quote with `dry: true`.
+
+Configure `NEAR_INTENTS_API_BASE_URL` in `.env.local` using the API base URL published in the current [Tidepool documentation](https://docs.usetidepool.tech). The adapter accepts HTTPS hosts under `usetidepool.tech` and rejects the official mainnet 1Click host. Do not point it at mainnet.
+
+The quote endpoint requires exact asset IDs, a positive integer amount in base units, a refund address and a recipient. It always forces a dry quote. It does not create a deposit address, sign a transaction, submit a deposit or move funds. The returned quote is informational; the current payment policy engine does not yet authorize or constrain this separate quote route.
+
+Tidepool is a community-built testnet sandbox and is not an official NEAR-operated testnet service. Verify its current endpoint and token list against its documentation before use.
 
 ## Demo policy
 
