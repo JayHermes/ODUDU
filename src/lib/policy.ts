@@ -20,7 +20,7 @@ export const DEMO_POLICY: Readonly<TreasuryPolicy> = Object.freeze({
   currency: "USD", maxSinglePaymentUsd: 1_000, dailyBudgetUsd: 2_500, spentTodayUsd: 450,
   approvalAboveUsd: 300,
   allowedRecipients: ["vendor-acme", "cloud-hosting", "payroll-provider"],
-  allowedCategories: ["software", "operations", "payroll", "marketing"],
+  allowedCategories: ["software", "operations", "payroll", "marketing"] as TreasuryPolicy["allowedCategories"],
 });
 export type PolicyResult = {
   decision: Decision; reasons: string[];
