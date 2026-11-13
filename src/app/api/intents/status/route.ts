@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth/server";
 import { buildStatusPath, getTidepoolBaseUrl, statusInputSchema } from "@/lib/near-intents";
 
 export const runtime = "nodejs";
