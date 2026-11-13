@@ -126,14 +126,16 @@ export default function Home() {
   }
 
   async function getLiveQuote() {
-    const selectedRecipient = recipients.find(item => item.recipient_key === recipient);
+    const selectedRecipient = recipients.find(item => item.recipient_key === recipient && item.recipient_key !== "owner-refund");
+    const refundWallet = recipients.find(item => item.recipient_key === "owner-refund");
     if (!selectedRecipient) { setQuoteError("Add and authorize a payment destination before creating a live quote."); return; }
+    if (!refundWallet) { setQuoteError("Add an owner-refund wallet in Recipient Control before creating a live quote."); return; }
     setQuoteLoading(true); setQuoteError(""); setLiveQuote(null);
     try {
       const response = await fetch("/api/intents/quote?mode=live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: Number(amount), category, description }, approvalId: result?.approvalId }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo: refundWallet.destination_address, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: Number(amount), category, description }, approvalId: result?.approvalId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to create live quote.");
@@ -182,7 +184,7 @@ export default function Home() {
       <div className="section-heading"><div><div className="eyebrow">01 / PAYMENT REQUEST</div><h2>Evaluate a transaction</h2></div><span className="demo-tag">DEMO ENVIRONMENT</span></div>
       <div className="columns">
         <form className="panel form-panel" onSubmit={submit}>
-          <label>Recipient<select value={recipient} onChange={e=>setRecipient(e.target.value)} required><option value="">Select an authorized recipient</option>{recipients.map(item=><option key={item.recipient_key} value={item.recipient_key}>{item.display_name} · {item.recipient_key}</option>)}</select></label>
+          <label>Recipient<select value={recipient} onChange={e=>setRecipient(e.target.value)} required><option value="">Select an authorized recipient</option>{recipients.filter(item=>item.recipient_key!=="owner-refund").map(item=><option key={item.recipient_key} value={item.recipient_key}>{item.display_name} · {item.recipient_key}</option>)}</select></label>
           <div className="field-row"><label>Amount (USD)<input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} required/></label><label>Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="software">Software</option><option value="operations">Operations</option><option value="payroll">Payroll</option><option value="marketing">Marketing</option><option value="other">Other</option></select></label></div>
           <label>Payment description<input value={description} onChange={e=>setDescription(e.target.value)} minLength={3} maxLength={500} required/></label>
           <button className="submit" type="submit" disabled={loading}>{loading?"CHECKING POLICY…":"CHECK PAYMENT POLICY"}<span>↗</span></button>
