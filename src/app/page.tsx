@@ -50,6 +50,10 @@ export default function Home() {
   const [quoteError, setQuoteError] = useState("");
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [liveQuote, setLiveQuote] = useState<Quote | null>(null);
+  const [txHash, setTxHash] = useState("");
+  const [settlementStatus, setSettlementStatus] = useState<unknown>(null);
+  const [settlementError, setSettlementError] = useState("");
+  const [settlementLoading, setSettlementLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/intents/tokens")
@@ -111,6 +115,37 @@ export default function Home() {
     } finally { setQuoteLoading(false); }
   }
 
+  async function submitDeposit() {
+    const depositAddress = liveQuote?.quote?.depositAddress;
+    if (!depositAddress || !txHash.trim()) return;
+    setSettlementLoading(true); setSettlementError("");
+    try {
+      const response = await fetch("/api/intents/deposit/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txHash: txHash.trim(), depositAddress }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Unable to submit deposit.");
+      setSettlementStatus(data.status);
+      await pollSettlement(depositAddress);
+    } catch (err) {
+      setSettlementError(err instanceof Error ? err.message : "Unable to submit deposit.");
+    } finally { setSettlementLoading(false); }
+  }
+
+  async function pollSettlement(depositAddress: string) {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await fetch(`/api/intents/status?depositAddress=${encodeURIComponent(depositAddress)}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Unable to check settlement status.");
+      setSettlementStatus(data.status);
+      const current = data.status?.status;
+      if (current === "SUCCESS" || current === "REFUNDED" || current === "FAILED") return;
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+
   return <main className="shell">
     <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
     <section className="hero" id="top"><div className="eyebrow">AUTONOMOUS FINANCIAL INFRASTRUCTURE</div><h1>Give your AI<br/><em>financial agency.</em></h1><p className="hero-copy">Keep financial authority where it belongs. Odudu checks every proposed payment against rules set by the business owner.</p></section>
@@ -148,6 +183,14 @@ export default function Home() {
         </form>
         {quote&&<div className="quote-card"><div><span>AMOUNT OUT</span><strong>{quote.quote?.amountOutFormatted??quote.quote?.amountOut??"—"}</strong></div><div><span>MINIMUM OUT</span><strong>{quote.quote?.minAmountOutFormatted??quote.quote?.minAmountOut??"—"}</strong></div><div><span>FEE</span><strong>{quote.quote?.feeFormatted??quote.quote?.fee??"—"}</strong></div><div><span>DEADLINE</span><strong>{quote.quote?.deadline??"—"}</strong></div></div>}
         {liveQuote&&<div className="quote-card live-quote"><div><span>DEPOSIT ADDRESS</span><strong>{liveQuote.quote?.depositAddress??"—"}</strong></div><div><span>AMOUNT TO DEPOSIT</span><strong>{liveQuote.quote?.amountInFormatted??liveQuote.quote?.amountIn??"—"}</strong></div><div><span>MINIMUM OUT</span><strong>{liveQuote.quote?.minAmountOutFormatted??liveQuote.quote?.minAmountOut??"—"}</strong></div><div><span>DEADLINE</span><strong>{liveQuote.quote?.deadline??"—"}</strong></div></div>}
+        {liveQuote&&<div className="form-panel settlement-panel">
+          <div className="eyebrow">04 / TESTNET DEPOSIT</div>
+          <label>NEAR transaction hash<input value={txHash} onChange={e=>setTxHash(e.target.value)} placeholder="Paste the testnet transaction hash" /></label>
+          <button className="submit" type="button" disabled={settlementLoading || !txHash.trim()} onClick={submitDeposit}>{settlementLoading?"SUBMITTING / POLLING…":"SUBMIT DEPOSIT & TRACK"}<span>↗</span></button>
+          <p className="form-note">Send only Tidepool testnet assets to the exact deposit address above. Never use real funds.</p>
+          {settlementError&&<p className="error">{settlementError}</p>}
+          {settlementStatus&&<pre className="status-box">{JSON.stringify(settlementStatus, null, 2)}</pre>}
+        </div>}
       </section>
     </section>
     <footer><span>ODUDU / BUILDING FINANCIAL CONTROL FOR AI</span><span>NO FUNDS ARE MOVED IN THIS PROTOTYPE</span></footer>
