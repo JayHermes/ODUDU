@@ -16,7 +16,12 @@ export async function POST(request: Request) {
     }
 
     const baseUrl = getTidepoolBaseUrl();
-    const mode = new URL(request.url).searchParams.get("mode") ?? "dry";\n    if (mode !== "dry" && mode !== "live") {\n      return NextResponse.json({ error: "Invalid quote mode." }, { status: 400 });\n    }\n\n    const quoteRequest = mode === "live" ? buildLiveQuoteRequest(parsed.data) : buildDryQuoteRequest(parsed.data);
+    const mode = new URL(request.url).searchParams.get("mode") ?? "dry";
+    if (mode !== "dry" && mode !== "live") {
+      return NextResponse.json({ error: "Invalid quote mode." }, { status: 400 });
+    }
+
+    const quoteRequest = mode === "live" ? buildLiveQuoteRequest(parsed.data) : buildDryQuoteRequest(parsed.data);
     const response = await fetch(`${baseUrl}/v0/quote`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
