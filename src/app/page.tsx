@@ -148,7 +148,7 @@ export default function Home() {
   }
 
   return <main className="shell">
-    <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
+    <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><a href="/auth/sign-in" style={{color:"inherit",textDecoration:"none"}}>OWNER SIGN IN</a><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
     <section className="hero" id="top"><div className="eyebrow">AUTONOMOUS FINANCIAL INFRASTRUCTURE</div><h1>Give your AI<br/><em>financial agency.</em></h1><p className="hero-copy">Keep financial authority where it belongs. Odudu checks every proposed payment against rules set by the business owner.</p></section>
 
     <section className="workspace">
