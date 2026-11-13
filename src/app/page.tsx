@@ -90,7 +90,7 @@ export default function Home() {
       const response = await fetch("/api/intents/quote?mode=dry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100 }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100, policyRequest: { recipient, amountUsd: Number(amount), category, description } }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to get Tidepool quote.");
@@ -106,7 +106,7 @@ export default function Home() {
       const response = await fetch("/api/intents/quote?mode=live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100 }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100, policyRequest: { recipient, amountUsd: Number(amount), category, description } }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to create live quote.");
