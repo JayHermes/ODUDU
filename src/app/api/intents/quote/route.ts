@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
-import { evaluateBusinessPayment } from "@/lib/db";
+import { evaluateBusinessPayment, getBusinessContext } from "@/lib/db";
 import { paymentRequestSchema } from "@/lib/policy";
 import { buildDryQuoteRequest, buildLiveQuoteRequest, getTidepoolBaseUrl, intentsQuoteInputSchema } from "@/lib/near-intents";
 
@@ -37,18 +37,33 @@ export async function POST(request: Request) {
       if (payment.data.recipient !== parsed.data.recipient) {
         return NextResponse.json({ error: "Policy recipient must exactly match the Tidepool destination." }, { status: 403 });
       }
-      const policy = await evaluateBusinessPayment(
-        { id: session.user.id, name: session.user.name },
-        payment.data,
-        "address",
-      );
-      if (policy.decision !== "approved") {
-        return NextResponse.json({
-          error: policy.decision === "needs_approval"
-            ? "This payment requires human approval. A live quote has not been created."
-            : "This payment was rejected by Odudu policy. A live quote has not been created.",
-          policy,
-        }, { status: 403 });
+      const user = { id: session.user.id, name: session.user.name };
+      const policy = await evaluateBusinessPayment(user, payment.data, "address");
+      if (policy.decision === "rejected") {
+        return NextResponse.json({ error: "This payment was rejected by Odudu policy. A live quote has not been created.", policy }, { status: 403 });
+      }
+      if (policy.decision === "needs_approval") {
+        const approvalId = typeof payload.approvalId === "string" ? payload.approvalId : "";
+        if (!approvalId) {
+          return NextResponse.json({ error: "Human approval is required before a live quote can be created.", policy }, { status: 403 });
+        }
+        const context = await getBusinessContext(user);
+        const approved = await context.sql`
+          SELECT id
+          FROM public.payment_approvals
+          WHERE id = ${approvalId}
+            AND business_id = ${context.businessId}
+            AND status = 'approved'
+            AND amount_minor = ${Math.round(payment.data.amountUsd * 100)}
+            AND category = ${payment.data.category}
+            AND description = ${payment.data.description}
+            AND destination_address = ${parsed.data.recipient}
+            AND expires_at > now()
+          LIMIT 1
+        `;
+        if (!approved.length) {
+          return NextResponse.json({ error: "The matching payment approval is missing, expired, or not approved.", policy }, { status: 403 });
+        }
       }
     }
 
