@@ -14,6 +14,7 @@ type Evaluation = {
 };
 
 type Token = { symbol: string; assetId?: string; asset_id?: string; decimals: number; blockchain?: string };
+type Recipient = { recipient_key: string; display_name: string; chain_id: string; destination_address: string; asset_id?: string | null };
 type Quote = {
   quote?: {
     depositAddress?: string;
@@ -34,7 +35,8 @@ type Quote = {
 const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 
 export default function Home() {
-  const [recipient, setRecipient] = useState("vendor-acme");
+  const [recipient, setRecipient] = useState("");
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [amount, setAmount] = useState("180");
   const [category, setCategory] = useState("software");
   const [description, setDescription] = useState("Monthly software subscription");
@@ -57,6 +59,16 @@ export default function Home() {
   const [settlementLoading, setSettlementLoading] = useState(false);
 
   useEffect(() => {
+    fetch("/api/recipients")
+      .then(async response => {
+        if (response.status === 401) return;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? "Unable to load approved recipients.");
+        const items: Recipient[] = data.recipients ?? [];
+        setRecipients(items);
+        setRecipient(current => current || items[0]?.recipient_key || "");
+      })
+      .catch(err => setError(err instanceof Error ? err.message : "Unable to load recipients."));
     fetch("/api/intents/tokens")
       .then(async response => {
         const data = await response.json();
@@ -87,10 +99,11 @@ export default function Home() {
     event.preventDefault();
     setQuoteLoading(true); setQuoteError(""); setQuote(null);
     try {
+      const selectedRecipient = recipients.find(item => item.recipient_key === recipient);
       const response = await fetch("/api/intents/quote?mode=dry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100, policyRequest: { recipient: refundTo, amountUsd: Number(amount), category, description } }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: selectedRecipient?.destination_address ?? refundTo, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient?.destination_address ?? refundTo, amountUsd: Number(amount), category, description } }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to get Tidepool quote.");
@@ -101,12 +114,14 @@ export default function Home() {
   }
 
   async function getLiveQuote() {
+    const selectedRecipient = recipients.find(item => item.recipient_key === recipient);
+    if (!selectedRecipient) { setQuoteError("Add and authorize a payment destination before creating a live quote."); return; }
     setQuoteLoading(true); setQuoteError(""); setLiveQuote(null);
     try {
       const response = await fetch("/api/intents/quote?mode=live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100, policyRequest: { recipient: refundTo, amountUsd: Number(amount), category, description } }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: Number(amount), category, description } }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to create live quote.");
@@ -148,21 +163,21 @@ export default function Home() {
   }
 
   return <main className="shell">
-    <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><a href="/auth/sign-in" style={{color:"inherit",textDecoration:"none"}}>OWNER SIGN IN</a><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
+    <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><a href="/auth/sign-in" style={{color:"inherit",textDecoration:"none"}}>OWNER SIGN IN</a><a href="/recipients" style={{color:"inherit",textDecoration:"none"}}>RECIPIENTS</a><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
     <section className="hero" id="top"><div className="eyebrow">AUTONOMOUS FINANCIAL INFRASTRUCTURE</div><h1>Give your AI<br/><em>financial agency.</em></h1><p className="hero-copy">Keep financial authority where it belongs. Odudu checks every proposed payment against rules set by the business owner.</p></section>
 
     <section className="workspace">
       <div className="section-heading"><div><div className="eyebrow">01 / PAYMENT REQUEST</div><h2>Evaluate a transaction</h2></div><span className="demo-tag">DEMO ENVIRONMENT</span></div>
       <div className="columns">
         <form className="panel form-panel" onSubmit={submit}>
-          <label>Recipient<select value={recipient} onChange={e=>setRecipient(e.target.value)}><option value="vendor-acme">Vendor Acme · approved</option><option value="cloud-hosting">Cloud Hosting · approved</option><option value="payroll-provider">Payroll Provider · approved</option><option value="new-vendor">New Vendor · not approved</option></select></label>
+          <label>Recipient<select value={recipient} onChange={e=>setRecipient(e.target.value)} required><option value="">Select an authorized recipient</option>{recipients.map(item=><option key={item.recipient_key} value={item.recipient_key}>{item.display_name} · {item.recipient_key}</option>)}</select></label>
           <div className="field-row"><label>Amount (USD)<input type="number" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} required/></label><label>Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="software">Software</option><option value="operations">Operations</option><option value="payroll">Payroll</option><option value="marketing">Marketing</option><option value="other">Other</option></select></label></div>
           <label>Payment description<input value={description} onChange={e=>setDescription(e.target.value)} minLength={3} maxLength={500} required/></label>
           <button className="submit" type="submit" disabled={loading}>{loading?"CHECKING POLICY…":"CHECK PAYMENT POLICY"}<span>↗</span></button>
           <p className="form-note">Policy decision only. This does not move funds.</p>{error&&<p className="error">{error}</p>}
         </form>
         <aside className="panel policy-panel"><div className="panel-label">ACTIVE DEMO POLICY <span className="lock">⌑</span></div>
-          <div className="policy-stat"><span>Maximum single payment</span><strong>$1,000</strong></div><div className="policy-stat"><span>Daily budget</span><strong>$2,500</strong></div><div className="policy-stat"><span>Already spent today</span><strong>$450</strong></div><div className="policy-stat"><span>Human approval above</span><strong>$300</strong></div><div className="policy-divider"/><div className="panel-label">APPROVED RECIPIENTS</div><div className="recipient-list"><span>vendor-acme</span><span>cloud-hosting</span><span>payroll-provider</span></div><p className="policy-note">Demo values are fixed in server-side code.</p>
+          <div className="policy-stat"><span>Maximum single payment</span><strong>$1,000</strong></div><div className="policy-stat"><span>Daily budget</span><strong>$2,500</strong></div><div className="policy-stat"><span>Already spent today</span><strong>$450</strong></div><div className="policy-stat"><span>Human approval above</span><strong>$300</strong></div><div className="policy-divider"/><div className="panel-label">APPROVED RECIPIENTS</div><div className="recipient-list">{recipients.map(item=><span key={item.recipient_key}>{item.recipient_key}</span>)}</div><p className="policy-note">{recipients.length ? "Authorized destinations are stored against your business." : "No authorized recipients yet. Add a destination before evaluating payments."} <a href="/recipients">Manage recipients</a></p>
         </aside>
       </div>
       {result&&<section className="result-panel" aria-live="polite"><div className="result-head"><div><div className="eyebrow">02 / POLICY DECISION</div><h2>Evaluation result</h2></div><span className={"decision "+result.decision}>{result.decision.replace("_"," ")}</span></div><ul>{result.reasons.map((reason,index)=><li key={index}>{reason}</li>)}</ul><div className="result-foot"><span>Remaining daily budget</span><strong>{money(Math.max(0,result.policySnapshot.dailyBudgetUsd-result.policySnapshot.spentTodayUsd))}</strong></div></section>}
