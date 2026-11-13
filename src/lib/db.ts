@@ -45,7 +45,8 @@ export async function getBusinessContext(user: { id: string; name?: string | nul
     FROM public.treasury_transactions
     WHERE business_id = ${businessId}
       AND currency_code = 'USD'
-      AND status = 'success'
+      AND status IN ('pending', 'processing', 'success')
+      AND (status <> 'pending' OR NULLIF(metadata->>'deadline', '')::timestamptz > now())
       AND created_at >= date_trunc('day', now())
   `;
   const row = policies[0];
