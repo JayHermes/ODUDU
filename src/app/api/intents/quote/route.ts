@@ -34,6 +34,15 @@ export async function POST(request: Request) {
         );
       }
 
+      // The policy identity must be the exact destination sent to Tidepool.
+      // A separate vendor label must never authorize a different on-chain account.
+      if (payment.data.recipient !== parsed.data.recipient) {
+        return NextResponse.json(
+          { error: "Policy recipient must exactly match the Tidepool destination." },
+          { status: 403 },
+        );
+      }
+
       const policy = evaluatePayment(payment.data);
       if (policy.decision !== "approved") {
         return NextResponse.json(
