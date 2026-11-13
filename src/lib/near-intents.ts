@@ -29,7 +29,15 @@ export function getTidepoolBaseUrl(): string {
   return url.toString().replace(/\/$/, "");
 }
 
-export function buildLiveQuoteRequest(input: IntentsQuoteInput) {\n  return {\n    ...buildDryQuoteRequest(input),\n    dry: false as const,\n    deadline: new Date(Date.now() + 10 * 60 * 1000).toISOString(),\n  };\n}\n\nexport function buildDryQuoteRequest(input: IntentsQuoteInput) {
+export function buildLiveQuoteRequest(input: IntentsQuoteInput) {
+  return {
+    ...buildDryQuoteRequest(input),
+    dry: false as const,
+    deadline: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+  };
+}
+
+export function buildDryQuoteRequest(input: IntentsQuoteInput) {
   return {
     dry: true as const,
     swapType: "EXACT_INPUT" as const,
