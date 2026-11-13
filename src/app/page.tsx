@@ -4,6 +4,8 @@ import type { FormEvent } from "react";
 
 type Evaluation = {
   decision: "approved" | "needs_approval" | "rejected";
+  approvalId?: string;
+  approvalStatus?: string;
   reasons: string[];
   policySnapshot: {
     maxSinglePaymentUsd: number;
@@ -131,7 +133,7 @@ export default function Home() {
       const response = await fetch("/api/intents/quote?mode=live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: Number(amount), category, description } }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: Number(amount), category, description }, approvalId: result?.approvalId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to create live quote.");
@@ -173,7 +175,7 @@ export default function Home() {
   }
 
   return <main className="shell">
-    <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><a href="/auth/sign-in" style={{color:"inherit",textDecoration:"none"}}>OWNER SIGN IN</a><a href="/recipients" style={{color:"inherit",textDecoration:"none"}}>RECIPIENTS</a><a href="/policy" style={{color:"inherit",textDecoration:"none"}}>POLICY</a><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
+    <header className="topbar"><a className="wordmark" href="#top"><span className="mark">O</span> ODUDU</a><div className="top-meta"><a href="/auth/sign-in" style={{color:"inherit",textDecoration:"none"}}>OWNER SIGN IN</a><a href="/recipients" style={{color:"inherit",textDecoration:"none"}}>RECIPIENTS</a><a href="/policy" style={{color:"inherit",textDecoration:"none"}}>POLICY</a><a href="/approvals" style={{color:"inherit",textDecoration:"none"}}>APPROVALS</a><span className="live-dot"/> POLICY ENGINE <span className="version">PROTOTYPE 0.2</span></div></header>
     <section className="hero" id="top"><div className="eyebrow">AUTONOMOUS FINANCIAL INFRASTRUCTURE</div><h1>Give your AI<br/><em>financial agency.</em></h1><p className="hero-copy">Keep financial authority where it belongs. Odudu checks every proposed payment against rules set by the business owner.</p></section>
 
     <section className="workspace">
@@ -190,7 +192,7 @@ export default function Home() {
           <div className="policy-stat"><span>Maximum single payment</span><strong>{businessPolicy ? money(businessPolicy.maxPaymentUsd) : "—"}</strong></div><div className="policy-stat"><span>Daily budget</span><strong>{businessPolicy ? money(businessPolicy.dailyBudgetUsd) : "—"}</strong></div><div className="policy-stat"><span>Already spent today</span><strong>{businessPolicy ? money(businessPolicy.spentTodayUsd) : "—"}</strong></div><div className="policy-stat"><span>Human approval above</span><strong>{businessPolicy ? money(businessPolicy.approvalAboveUsd) : "—"}</strong></div><div className="policy-divider"/><div className="panel-label">APPROVED RECIPIENTS</div><div className="recipient-list">{recipients.map(item=><span key={item.recipient_key}>{item.recipient_key}</span>)}</div><p className="policy-note">{recipients.length ? "Authorized destinations are stored against your business." : "No authorized recipients yet. Add a destination before evaluating payments."} <a href="/recipients">Manage recipients</a></p>
         </aside>
       </div>
-      {result&&<section className="result-panel" aria-live="polite"><div className="result-head"><div><div className="eyebrow">02 / POLICY DECISION</div><h2>Evaluation result</h2></div><span className={"decision "+result.decision}>{result.decision.replace("_"," ")}</span></div><ul>{result.reasons.map((reason,index)=><li key={index}>{reason}</li>)}</ul><div className="result-foot"><span>Remaining daily budget</span><strong>{money(Math.max(0,result.policySnapshot.dailyBudgetUsd-result.policySnapshot.spentTodayUsd))}</strong></div></section>}
+      {result&&<section className="result-panel" aria-live="polite"><div className="result-head"><div><div className="eyebrow">02 / POLICY DECISION</div><h2>Evaluation result</h2></div><span className={"decision "+result.decision}>{result.decision.replace("_"," ")}</span></div><ul>{result.reasons.map((reason,index)=><li key={index}>{reason}</li>)}</ul>{result.decision==="needs_approval"&&<p className="form-note">Approval request: {result.approvalStatus??"pending"} · <a href="/approvals">Open approval queue</a></p>}<div className="result-foot"><span>Remaining daily budget</span><strong>{money(Math.max(0,result.policySnapshot.dailyBudgetUsd-result.policySnapshot.spentTodayUsd))}</strong></div></section>}
 
       <section className="result-panel quote-section">
         <div className="section-heading"><div><div className="eyebrow">03 / NEAR INTENTS</div><h2>Preview a testnet settlement</h2></div><span className="demo-tag">DRY RUN</span></div>
