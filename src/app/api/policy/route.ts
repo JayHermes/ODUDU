@@ -59,7 +59,7 @@ export async function PATCH(request: Request) {
         (business_id, actor_user_id, event_type, entity_type, details)
       VALUES (
         ${context.businessId}, ${session.user.id}, 'policy.updated', 'treasury_policy',
-        ${JSON.stringify({ ...value, version: rows[0].version })}
+        ${JSON.stringify({ ...value, version: rows[0].version })}::jsonb
       )
     `;
     return NextResponse.json({ saved: true, version: rows[0].version });
