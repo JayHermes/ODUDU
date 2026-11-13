@@ -35,7 +35,7 @@ The business owner must explicitly authorize every payee destination. The specia
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and fill in the Neon values from your project. Use the pooled PostgreSQL connection string for `DATABASE_URL`.
+Copy `.env.example` to `.env.local` and fill in the Neon values from your project. Use the pooled PostgreSQL connection string for `DATABASE_URL` in Vercel and local development.
 
 Required variables:
 
