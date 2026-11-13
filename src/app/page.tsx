@@ -131,12 +131,23 @@ export default function Home() {
     const refundWallet = recipients.find(item => item.recipient_key === "owner-refund");
     if (!selectedRecipient) { setQuoteError("Add and authorize a payment destination before creating a live quote."); return; }
     if (!refundWallet) { setQuoteError("Add an owner-refund wallet in Recipient Control before creating a live quote."); return; }
+    const originToken = tokens.find(token => (token.assetId ?? token.asset_id) === originAsset);
+    if (!originToken || originToken.symbol.toUpperCase() !== "USDC" || originToken.decimals !== 6) {
+      setQuoteError("Live V1 settlement currently accepts a 6-decimal USDC origin asset only.");
+      return;
+    }
+    const amountNumber = Number(amount);
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0 || Math.round(amountNumber * 100) !== amountNumber * 100) {
+      setQuoteError("Enter a valid USD amount with no more than two decimal places.");
+      return;
+    }
+    const liveAmount = (BigInt(Math.round(amountNumber * 100)) * 10_000n).toString();
     setQuoteLoading(true); setQuoteError(""); setLiveQuote(null);
     try {
       const response = await fetch("/api/intents/quote?mode=live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo: refundWallet.destination_address, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: Number(amount), category, description }, approvalId: result?.approvalId }),
+        body: JSON.stringify({ originAsset, destinationAsset, amount: liveAmount, refundTo: refundWallet.destination_address, recipient: selectedRecipient.destination_address, slippageTolerance: 100, policyRequest: { recipient: selectedRecipient.destination_address, amountUsd: amountNumber, category, description }, approvalId: result?.approvalId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to create live quote.");
@@ -205,11 +216,11 @@ export default function Home() {
             <label>Destination asset<select value={destinationAsset} onChange={e=>setDestinationAsset(e.target.value)}>{tokens.filter(t=>t.symbol).map(t=><option key={t.assetId??t.asset_id} value={t.assetId??t.asset_id}>{t.symbol} · {t.blockchain??"near"}</option>)}</select></label>
           </div>
           <div className="field-row">
-            <label>Amount in base units<input value={tokenAmount} onChange={e=>setTokenAmount(e.target.value)} inputMode="numeric" required/></label>
+            <label>Dry quote amount in base units<input value={tokenAmount} onChange={e=>setTokenAmount(e.target.value)} inputMode="numeric" required/></label>
             <label>Refund / recipient<input value={refundTo} onChange={e=>setRefundTo(e.target.value)} required/></label>
           </div>
           <div className="field-row"><button className="submit" type="submit" disabled={quoteLoading}>{quoteLoading?"REQUESTING QUOTE…":"GET DRY QUOTE"}<span>↗</span></button><button className="submit" type="button" disabled={quoteLoading} onClick={getLiveQuote}>{quoteLoading?"CREATING…":"CREATE LIVE QUOTE"}<span>↗</span></button></div>
-          <p className="form-note">Dry quote only prices the swap. Live quote creates a one-time testnet deposit address; no funds move until you deposit.</p>
+          <p className="form-note">Dry quotes use the base-unit amount above. Live quotes derive the USDC deposit amount from the USD payment amount and bind it to the policy check. Live quotes are testnet only.</p>
           {quoteError&&<p className="error">{quoteError}</p>}
         </form>
         {quote&&<div className="quote-card"><div><span>AMOUNT OUT</span><strong>{quote.quote?.amountOutFormatted??quote.quote?.amountOut??"—"}</strong></div><div><span>MINIMUM OUT</span><strong>{quote.quote?.minAmountOutFormatted??quote.quote?.minAmountOut??"—"}</strong></div><div><span>FEE</span><strong>{quote.quote?.feeFormatted??quote.quote?.fee??"—"}</strong></div><div><span>DEADLINE</span><strong>{quote.quote?.deadline??"—"}</strong></div></div>}
