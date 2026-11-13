@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { buildDryQuoteRequest, getTidepoolBaseUrl, intentsQuoteInputSchema } from "../src/lib/near-intents";
+import { buildDryQuoteRequest, buildLiveQuoteRequest, getTidepoolBaseUrl, intentsQuoteInputSchema } from "../src/lib/near-intents";
 
 const input = {
   originAsset: "nep141:usdc.near",
@@ -32,7 +32,7 @@ describe("NEAR Intents quote preview", () => {
     expect(request.recipientType).toBe("INTENTS");
   });
 
-  it("requires a configured Tidepool HTTPS endpoint", () => {
+  it("builds an explicit live quote without reusing the dry flag", () => {\n    const request = buildLiveQuoteRequest(intentsQuoteInputSchema.parse(input));\n    expect(request.dry).toBe(false);\n    expect(request.depositType).toBe("INTENTS");\n    expect(request.refundType).toBe("INTENTS");\n    expect(request.recipientType).toBe("INTENTS");\n    expect(new Date(request.deadline).getTime()).toBeGreaterThan(Date.now());\n  });\n\n  it("requires a configured Tidepool HTTPS endpoint", () => {
     expect(() => getTidepoolBaseUrl()).toThrow(/not configured/i);
     process.env.NEAR_INTENTS_API_BASE_URL = "https://1click.chaindefuser.com";
     expect(() => getTidepoolBaseUrl()).toThrow(/restricted to the Tidepool/i);
