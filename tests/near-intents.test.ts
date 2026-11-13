@@ -27,9 +27,9 @@ describe("NEAR Intents quote preview", () => {
     const request = buildDryQuoteRequest(intentsQuoteInputSchema.parse(input));
     expect(request.dry).toBe(true);
     expect(request.swapType).toBe("EXACT_INPUT");
-    expect(request.depositType).toBe("INTENTS");
-    expect(request.refundType).toBe("INTENTS");
-    expect(request.recipientType).toBe("INTENTS");
+    expect(request.depositType).toBe("ORIGIN_CHAIN");
+    expect(request.refundType).toBe("ORIGIN_CHAIN");
+    expect(request.recipientType).toBe("DESTINATION_CHAIN");
   });
 
   it("builds an explicit live quote without reusing the dry flag", () => {\n    const request = buildLiveQuoteRequest(intentsQuoteInputSchema.parse(input));\n    expect(request.dry).toBe(false);\n    expect(request.depositType).toBe("INTENTS");\n    expect(request.refundType).toBe("INTENTS");\n    expect(request.recipientType).toBe("INTENTS");\n    expect(new Date(request.deadline).getTime()).toBeGreaterThan(Date.now());\n  });\n\n  it("requires a configured Tidepool HTTPS endpoint", () => {
