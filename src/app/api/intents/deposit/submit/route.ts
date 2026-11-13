@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth/server";
 import { buildDepositSubmitRequest, depositSubmitInputSchema, getTidepoolBaseUrl } from "@/lib/near-intents";
 
 export const runtime = "nodejs";
