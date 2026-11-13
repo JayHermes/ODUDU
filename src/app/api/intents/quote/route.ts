@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildDryQuoteRequest, getTidepoolBaseUrl, intentsQuoteInputSchema } from "@/lib/near-intents";
+import { buildDryQuoteRequest, buildLiveQuoteRequest, getTidepoolBaseUrl, intentsQuoteInputSchema } from "@/lib/near-intents";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const baseUrl = getTidepoolBaseUrl();
-    const quoteRequest = buildDryQuoteRequest(parsed.data);
+    const mode = new URL(request.url).searchParams.get("mode") ?? "dry";\n    if (mode !== "dry" && mode !== "live") {\n      return NextResponse.json({ error: "Invalid quote mode." }, { status: 400 });\n    }\n\n    const quoteRequest = mode === "live" ? buildLiveQuoteRequest(parsed.data) : buildDryQuoteRequest(parsed.data);
     const response = await fetch(`${baseUrl}/v0/quote`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ mode: "dry-run", quote: data });
+    return NextResponse.json({ mode, quote: data });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to request a quote.";
     return NextResponse.json({ error: message }, { status: 503 });
