@@ -35,7 +35,7 @@ export async function getBusinessContext(user: { id: string; name?: string | nul
     LIMIT 1
   `;
   const recipients = await sql`
-    SELECT recipient_key, display_name, chain_id, destination_address, asset_id
+    SELECT id, recipient_key, display_name, chain_id, destination_address, asset_id
     FROM public.approved_recipients
     WHERE business_id = ${businessId} AND status = 'active'
     ORDER BY display_name
