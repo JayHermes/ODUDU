@@ -35,13 +35,13 @@ export function buildDryQuoteRequest(input: IntentsQuoteInput) {
     swapType: "EXACT_INPUT" as const,
     slippageTolerance: input.slippageTolerance,
     originAsset: input.originAsset,
-    depositType: "ORIGIN_CHAIN" as const,
+    depositType: "INTENTS" as const,
     destinationAsset: input.destinationAsset,
     amount: input.amount,
     refundTo: input.refundTo,
-    refundType: "ORIGIN_CHAIN" as const,
+    refundType: "INTENTS" as const,
     recipient: input.recipient,
-    recipientType: "DESTINATION_CHAIN" as const,
+    recipientType: "INTENTS" as const,
     deadline: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
   };
 }
