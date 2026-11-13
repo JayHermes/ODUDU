@@ -190,7 +190,7 @@ export default function Home() {
           <button className="submit" type="button" disabled={settlementLoading || !txHash.trim()} onClick={submitDeposit}>{settlementLoading?"SUBMITTING / POLLING…":"SUBMIT DEPOSIT & TRACK"}<span>↗</span></button>
           <p className="form-note">Send only Tidepool testnet assets to the exact deposit address above. Never use real funds.</p>
           {settlementError&&<p className="error">{settlementError}</p>}
-          {settlementStatus&&<pre className="status-box">{JSON.stringify(settlementStatus, null, 2)}</pre>}
+          {settlementStatus !== null && <pre className="status-box">{JSON.stringify(settlementStatus, null, 2)}</pre>}
         </div>}
       </section>
     </section>
