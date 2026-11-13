@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     }
     const context = await getBusinessContext({ id: session.user.id, name: session.user.name });
     const recipient = context.recipients.find(item => item.recipient_key === parsed.data.recipient);
+    if (!context.policyEnabled) {
+      return NextResponse.json({ decision: "rejected", reasons: ["Treasury policy is disabled by the business owner."], policySnapshot: { maxSinglePaymentUsd: context.policy.maxSinglePaymentUsd, dailyBudgetUsd: context.policy.dailyBudgetUsd, spentTodayUsd: context.policy.spentTodayUsd, approvalAboveUsd: context.policy.approvalAboveUsd } });
+    }
     const result = evaluatePayment({
       ...parsed.data,
       recipient: recipient ? String(recipient.recipient_key) : parsed.data.recipient,
