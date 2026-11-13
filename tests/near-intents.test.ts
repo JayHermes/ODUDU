@@ -27,8 +27,9 @@ describe("NEAR Intents quote preview", () => {
     const request = buildDryQuoteRequest(intentsQuoteInputSchema.parse(input));
     expect(request.dry).toBe(true);
     expect(request.swapType).toBe("EXACT_INPUT");
-    expect(request.depositType).toBe("ORIGIN_CHAIN");
-    expect(request.recipientType).toBe("DESTINATION_CHAIN");
+    expect(request.depositType).toBe("INTENTS");
+    expect(request.refundType).toBe("INTENTS");
+    expect(request.recipientType).toBe("INTENTS");
   });
 
   it("requires a configured Tidepool HTTPS endpoint", () => {
