@@ -6,6 +6,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     const parsed = depositSubmitInputSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid deposit submission.", details: parsed.error.flatten() }, { status: 400 });
