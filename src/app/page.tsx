@@ -48,7 +48,8 @@ export default function Home() {
   const [refundTo, setRefundTo] = useState("alice.testnet");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState("");
-  const [quoteLoading, setQuoteLoading] = useState(false);\n  const [liveQuote, setLiveQuote] = useState<Quote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [liveQuote, setLiveQuote] = useState<Quote | null>(null);
 
   useEffect(() => {
     fetch("/api/intents/tokens")
