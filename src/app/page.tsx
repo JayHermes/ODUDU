@@ -64,24 +64,17 @@ export default function Home() {
   const [settlementLoading, setSettlementLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/recipients")
+    fetch("/api/bootstrap")
       .then(async response => {
         if (response.status === 401) return;
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? "Unable to load approved recipients.");
+        if (!response.ok) throw new Error(data.error ?? "Unable to load business workspace.");
         const items: Recipient[] = data.recipients ?? [];
         setRecipients(items);
         setRecipient(current => current || items.find(item => item.recipient_key !== "owner-refund")?.recipient_key || "");
+        setBusinessPolicy(data.policy ?? null);
       })
-      .catch(err => setError(err instanceof Error ? err.message : "Unable to load recipients."));
-    fetch("/api/policy")
-      .then(async response => {
-        if (response.status === 401) return;
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? "Unable to load treasury policy.");
-        setBusinessPolicy(data);
-      })
-      .catch(err => setError(err instanceof Error ? err.message : "Unable to load treasury policy."));
+      .catch(err => setError(err instanceof Error ? err.message : "Unable to load business workspace."));
     fetch("/api/intents/tokens")
       .then(async response => {
         const data = await response.json();
