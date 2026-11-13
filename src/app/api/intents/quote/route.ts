@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { evaluatePayment, paymentRequestSchema } from "@/lib/policy";
 import { buildDryQuoteRequest, buildLiveQuoteRequest, getTidepoolBaseUrl, intentsQuoteInputSchema } from "@/lib/near-intents";
 
 export const runtime = "nodejs";
@@ -6,8 +7,12 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const body: unknown = await request.json();
-    const parsed = intentsQuoteInputSchema.safeParse(body);
+    if (typeof body !== "object" || body === null) {
+      return NextResponse.json({ error: "Invalid quote request." }, { status: 400 });
+    }
 
+    const payload = body as Record<string, unknown>;
+    const parsed = intentsQuoteInputSchema.safeParse(payload);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid quote request.", details: parsed.error.flatten() },
@@ -15,12 +20,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const baseUrl = getTidepoolBaseUrl();
     const mode = new URL(request.url).searchParams.get("mode") ?? "dry";
     if (mode !== "dry" && mode !== "live") {
       return NextResponse.json({ error: "Invalid quote mode." }, { status: 400 });
     }
 
+    if (mode === "live") {
+      const payment = paymentRequestSchema.safeParse(payload.policyRequest);
+      if (!payment.success) {
+        return NextResponse.json(
+          { error: "A valid payment policy request is required before creating a live quote.", details: payment.error.flatten() },
+          { status: 400 },
+        );
+      }
+
+      const policy = evaluatePayment(payment.data);
+      if (policy.decision !== "approved") {
+        return NextResponse.json(
+          {
+            error: policy.decision === "needs_approval"
+              ? "This payment requires human approval. A live quote has not been created."
+              : "This payment was rejected by Odudu policy. A live quote has not been created.",
+            policy,
+          },
+          { status: 403 },
+        );
+      }
+    }
+
+    const baseUrl = getTidepoolBaseUrl();
     const quoteRequest = mode === "live" ? buildLiveQuoteRequest(parsed.data) : buildDryQuoteRequest(parsed.data);
     const response = await fetch(`${baseUrl}/v0/quote`, {
       method: "POST",
