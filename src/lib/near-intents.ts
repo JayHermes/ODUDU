@@ -53,3 +53,34 @@ export function buildDryQuoteRequest(input: IntentsQuoteInput) {
     deadline: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
   };
 }
+
+
+export const depositSubmitInputSchema = z.object({
+  txHash: z.string().trim().min(1).max(256),
+  depositAddress: z.string().trim().min(1).max(256),
+  memo: z.string().trim().min(1).max(256).optional(),
+  nearSenderAccount: z.string().trim().min(1).max(256).optional(),
+});
+
+export const statusInputSchema = z.object({
+  depositAddress: z.string().trim().min(1).max(256),
+  depositMemo: z.string().trim().min(1).max(256).optional(),
+});
+
+export type DepositSubmitInput = z.infer<typeof depositSubmitInputSchema>;
+export type StatusInput = z.infer<typeof statusInputSchema>;
+
+export function buildDepositSubmitRequest(input: DepositSubmitInput) {
+  return {
+    txHash: input.txHash,
+    depositAddress: input.depositAddress,
+    ...(input.memo ? { memo: input.memo } : {}),
+    ...(input.nearSenderAccount ? { nearSenderAccount: input.nearSenderAccount } : {}),
+  };
+}
+
+export function buildStatusPath(input: StatusInput) {
+  const params = new URLSearchParams({ depositAddress: input.depositAddress });
+  if (input.depositMemo) params.set("depositMemo", input.depositMemo);
+  return `/v0/status?${params.toString()}`;
+}
