@@ -132,7 +132,7 @@ export async function POST(request: Request) {
           ${liveContext.businessId}, 'near_intents', ${depositAddress},
           ${Math.round(livePayment.amountUsd * 100)}, 'USD',
           ${String(recipient.chain_id)}, ${String(recipient.destination_address)},
-          'pending', ${JSON.stringify({ recipientKey: recipient.recipient_key })}::jsonb
+          'pending', ${JSON.stringify({ recipientKey: recipient.recipient_key, deadline: responseData.quote?.deadline ?? null })}::jsonb
         )
         RETURNING id
       `;
