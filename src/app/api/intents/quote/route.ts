@@ -24,6 +24,7 @@ export async function POST(request: Request) {
 
     let liveContext: Awaited<ReturnType<typeof getBusinessContext>> | null = null;
     let livePayment: { amountUsd: number; recipient: string } | null = null;
+    const baseUrl = getTidepoolBaseUrl();
     if (mode === "live") {
       const { data: session } = await auth.getSession();
       if (!session?.user) {
@@ -35,6 +36,32 @@ export async function POST(request: Request) {
           { error: "A valid payment policy request is required before creating a live quote.", details: payment.error.flatten() },
           { status: 400 },
         );
+      }
+      const tokenResponse = await fetch(`${baseUrl}/v0/tokens`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!tokenResponse.ok) {
+        return NextResponse.json({ error: "Unable to verify the Tidepool origin asset." }, { status: 502 });
+      }
+      const tokenPayload: unknown = await tokenResponse.json();
+      const tokenList = Array.isArray(tokenPayload)
+        ? tokenPayload
+        : typeof tokenPayload === "object" && tokenPayload !== null && "tokens" in tokenPayload && Array.isArray((tokenPayload as { tokens?: unknown[] }).tokens)
+          ? (tokenPayload as { tokens: unknown[] }).tokens
+          : [];
+      const originToken = tokenList.find((item): item is { assetId?: string; asset_id?: string; symbol?: string; decimals?: number } =>
+        typeof item === "object" && item !== null &&
+        ((item as { assetId?: string; asset_id?: string }).assetId === parsed.data.originAsset ||
+         (item as { assetId?: string; asset_id?: string }).asset_id === parsed.data.originAsset)
+      );
+      if (!originToken || originToken.symbol?.toUpperCase() !== "USDC" || originToken.decimals !== 6) {
+        return NextResponse.json({ error: "Live V1 settlement currently accepts a 6-decimal USDC origin asset only." }, { status: 400 });
+      }
+      const expectedAmount = (BigInt(Math.round(payment.data.amountUsd * 100)) * 10_000n).toString();
+      if (parsed.data.amount !== expectedAmount) {
+        return NextResponse.json({ error: "Live quote amount must exactly match the USD payment amount in USDC base units." }, { status: 403 });
       }
       if (payment.data.recipient !== parsed.data.recipient) {
         return NextResponse.json({ error: "Policy recipient must exactly match the Tidepool destination." }, { status: 403 });
@@ -75,7 +102,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const baseUrl = getTidepoolBaseUrl();
     const quoteRequest = mode === "live" ? buildLiveQuoteRequest(parsed.data) : buildDryQuoteRequest(parsed.data);
     const response = await fetch(`${baseUrl}/v0/quote`, {
       method: "POST",
