@@ -48,7 +48,7 @@ export default function Home() {
   const [refundTo, setRefundTo] = useState("alice.testnet");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState("");
-  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteLoading, setQuoteLoading] = useState(false);\n  const [liveQuote, setLiveQuote] = useState<Quote | null>(null);
 
   useEffect(() => {
     fetch("/api/intents/tokens")
@@ -81,7 +81,7 @@ export default function Home() {
     event.preventDefault();
     setQuoteLoading(true); setQuoteError(""); setQuote(null);
     try {
-      const response = await fetch("/api/intents/quote", {
+      const response = await fetch("/api/intents/quote?mode=dry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100 }),
@@ -91,6 +91,22 @@ export default function Home() {
       setQuote(data.quote);
     } catch (err) {
       setQuoteError(err instanceof Error ? err.message : "Unable to get quote.");
+    } finally { setQuoteLoading(false); }
+  }
+
+  async function getLiveQuote() {
+    setQuoteLoading(true); setQuoteError(""); setLiveQuote(null);
+    try {
+      const response = await fetch("/api/intents/quote?mode=live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ originAsset, destinationAsset, amount: tokenAmount, refundTo, recipient: refundTo, slippageTolerance: 100 }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Unable to create live quote.");
+      setLiveQuote(data.quote);
+    } catch (err) {
+      setQuoteError(err instanceof Error ? err.message : "Unable to create live quote.");
     } finally { setQuoteLoading(false); }
   }
 
@@ -125,11 +141,12 @@ export default function Home() {
             <label>Amount in base units<input value={tokenAmount} onChange={e=>setTokenAmount(e.target.value)} inputMode="numeric" required/></label>
             <label>Refund / recipient<input value={refundTo} onChange={e=>setRefundTo(e.target.value)} required/></label>
           </div>
-          <button className="submit" type="submit" disabled={quoteLoading}>{quoteLoading?"REQUESTING QUOTE…":"GET DRY QUOTE"}<span>↗</span></button>
-          <p className="form-note">Uses Tidepool testnet. No deposit address is created and no funds move.</p>
+          <div className="field-row"><button className="submit" type="submit" disabled={quoteLoading}>{quoteLoading?"REQUESTING QUOTE…":"GET DRY QUOTE"}<span>↗</span></button><button className="submit" type="button" disabled={quoteLoading} onClick={getLiveQuote}>{quoteLoading?"CREATING…":"CREATE LIVE QUOTE"}<span>↗</span></button></div>
+          <p className="form-note">Dry quote only prices the swap. Live quote creates a one-time testnet deposit address; no funds move until you deposit.</p>
           {quoteError&&<p className="error">{quoteError}</p>}
         </form>
         {quote&&<div className="quote-card"><div><span>AMOUNT OUT</span><strong>{quote.quote?.amountOutFormatted??quote.quote?.amountOut??"—"}</strong></div><div><span>MINIMUM OUT</span><strong>{quote.quote?.minAmountOutFormatted??quote.quote?.minAmountOut??"—"}</strong></div><div><span>FEE</span><strong>{quote.quote?.feeFormatted??quote.quote?.fee??"—"}</strong></div><div><span>DEADLINE</span><strong>{quote.quote?.deadline??"—"}</strong></div></div>}
+        {liveQuote&&<div className="quote-card live-quote"><div><span>DEPOSIT ADDRESS</span><strong>{liveQuote.quote?.depositAddress??"—"}</strong></div><div><span>AMOUNT TO DEPOSIT</span><strong>{liveQuote.quote?.amountInFormatted??liveQuote.quote?.amountIn??"—"}</strong></div><div><span>MINIMUM OUT</span><strong>{liveQuote.quote?.minAmountOutFormatted??liveQuote.quote?.minAmountOut??"—"}</strong></div><div><span>DEADLINE</span><strong>{liveQuote.quote?.deadline??"—"}</strong></div></div>}
       </section>
     </section>
     <footer><span>ODUDU / BUILDING FINANCIAL CONTROL FOR AI</span><span>NO FUNDS ARE MOVED IN THIS PROTOTYPE</span></footer>
