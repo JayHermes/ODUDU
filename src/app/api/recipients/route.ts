@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       VALUES (
         ${context.businessId}, ${session.user.id}, 'recipient.authorized', 'recipient',
         ${String(rows[0].id)},
-        ${JSON.stringify({ recipientKey: item.recipientKey, chainId: item.chainId, destinationAddress: item.destinationAddress })}
+        ${JSON.stringify({ recipientKey: item.recipientKey, chainId: item.chainId, destinationAddress: item.destinationAddress })}::jsonb
       )
     `;
     return NextResponse.json({ recipient: rows[0] }, { status: 201 });
