@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       );
     }
     if (mode === "live" && liveContext && livePayment) {
-      const responseData = data as { quote?: { depositAddress?: string } };
+      const responseData = data as { quote?: { depositAddress?: string; deadline?: string } };
       const depositAddress = responseData.quote?.depositAddress;
       const recipient = liveContext.recipients.find(item => item.destination_address === parsed.data.recipient);
       if (!depositAddress || !recipient) {
