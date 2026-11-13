@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { buildDepositSubmitRequest, buildDryQuoteRequest, buildLiveQuoteRequest, buildStatusPath, getTidepoolBaseUrl, intentsQuoteInputSchema } from "../src/lib/near-intents";
+import {
+  buildDepositSubmitRequest,
+  buildDryQuoteRequest,
+  buildLiveQuoteRequest,
+  buildStatusPath,
+  getTidepoolBaseUrl,
+  intentsQuoteInputSchema,
+} from "../src/lib/near-intents";
 
 const input = {
   originAsset: "nep141:usdc.near",
@@ -23,7 +30,7 @@ describe("NEAR Intents quote preview", () => {
     expect(intentsQuoteInputSchema.safeParse({ ...input, amount: "0" }).success).toBe(false);
   });
 
-  it("always builds a dry quote and never requests a deposit address", () => {
+  it("builds a dry quote using the direct-origin-chain deposit mode", () => {
     const request = buildDryQuoteRequest(intentsQuoteInputSchema.parse(input));
     expect(request.dry).toBe(true);
     expect(request.swapType).toBe("EXACT_INPUT");
@@ -32,7 +39,16 @@ describe("NEAR Intents quote preview", () => {
     expect(request.recipientType).toBe("DESTINATION_CHAIN");
   });
 
-  it("builds an explicit live quote without reusing the dry flag", () => {\n    const request = buildLiveQuoteRequest(intentsQuoteInputSchema.parse(input));\n    expect(request.dry).toBe(false);\n    expect(request.depositType).toBe("INTENTS");\n    expect(request.refundType).toBe("INTENTS");\n    expect(request.recipientType).toBe("INTENTS");\n    expect(new Date(request.deadline).getTime()).toBeGreaterThan(Date.now());\n  });\n\n  it("builds deposit submission without dropping optional fields", () => {
+  it("builds a live quote using the direct-origin-chain deposit mode", () => {
+    const request = buildLiveQuoteRequest(intentsQuoteInputSchema.parse(input));
+    expect(request.dry).toBe(false);
+    expect(request.depositType).toBe("ORIGIN_CHAIN");
+    expect(request.refundType).toBe("ORIGIN_CHAIN");
+    expect(request.recipientType).toBe("DESTINATION_CHAIN");
+    expect(new Date(request.deadline).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("builds deposit submission without dropping optional fields", () => {
     expect(buildDepositSubmitRequest({
       txHash: "abc123",
       depositAddress: "deposit.testnet",
