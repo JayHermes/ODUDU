@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Deterministic policy engine. An LLM may propose a payment but cannot edit these rules. */
 export const paymentRequestSchema = z.object({
   recipient: z.string().trim().min(3).max(128),
-  amountUsd: z.number().finite().positive().max(1_000_000),
+  amountUsd: z.number().finite().positive().max(1_000_000).multipleOf(0.01),
   category: z.enum(["software", "operations", "payroll", "marketing", "other"]),
   description: z.string().trim().min(3).max(500),
 });
