@@ -16,6 +16,7 @@ type Evaluation = {
 type Token = { symbol: string; assetId?: string; asset_id?: string; decimals: number; blockchain?: string };
 type Quote = {
   quote?: {
+    depositAddress?: string;
     amountIn?: string;
     amountInFormatted?: string;
     amountOut?: string;
