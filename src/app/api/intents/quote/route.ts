@@ -22,6 +22,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid quote mode." }, { status: 400 });
     }
 
+    let liveContext: Awaited<ReturnType<typeof getBusinessContext>> | null = null;
+    let livePayment: { amountUsd: number; recipient: string } | null = null;
     if (mode === "live") {
       const { data: session } = await auth.getSession();
       if (!session?.user) {
@@ -39,6 +41,8 @@ export async function POST(request: Request) {
       }
       const user = { id: session.user.id, name: session.user.name };
       const context = await getBusinessContext(user);
+      liveContext = context;
+      livePayment = { amountUsd: payment.data.amountUsd, recipient: payment.data.recipient };
       const refundWallet = context.recipients.find(item => item.recipient_key === "owner-refund");
       if (!refundWallet || refundWallet.destination_address !== parsed.data.refundTo || (parsed.data.originAsset.startsWith("nep141:") && refundWallet.chain_id !== "near:testnet")) {
         return NextResponse.json({ error: "Set and use your business owner-refund wallet before creating a live quote." }, { status: 403 });
@@ -86,6 +90,27 @@ export async function POST(request: Request) {
         { error: "Tidepool rejected the quote request.", providerResponse: data },
         { status: response.status >= 400 && response.status < 500 ? 422 : 502 },
       );
+    }
+    if (mode === "live" && liveContext && livePayment) {
+      const responseData = data as { quote?: { depositAddress?: string } };
+      const depositAddress = responseData.quote?.depositAddress;
+      const recipient = liveContext.recipients.find(item => item.destination_address === parsed.data.recipient);
+      if (!depositAddress || !recipient) {
+        return NextResponse.json({ error: "Tidepool quote is missing a deposit address or authorized recipient." }, { status: 502 });
+      }
+      const saved = await liveContext.sql`
+        INSERT INTO public.treasury_transactions
+          (business_id, provider, provider_reference, amount_minor, currency_code,
+           chain_id, destination_address, status, metadata)
+        VALUES (
+          ${liveContext.businessId}, 'near_intents', ${depositAddress},
+          ${Math.round(livePayment.amountUsd * 100)}, 'USD',
+          ${String(recipient.chain_id)}, ${String(recipient.destination_address)},
+          'pending', ${JSON.stringify({ recipientKey: recipient.recipient_key })}::jsonb
+        )
+        RETURNING id
+      `;
+      return NextResponse.json({ mode, quote: data, transactionId: saved[0].id });
     }
     return NextResponse.json({ mode, quote: data });
   } catch (error) {
