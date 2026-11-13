@@ -70,7 +70,7 @@ export default function Home() {
         if (!response.ok) throw new Error(data.error ?? "Unable to load approved recipients.");
         const items: Recipient[] = data.recipients ?? [];
         setRecipients(items);
-        setRecipient(current => current || items[0]?.recipient_key || "");
+        setRecipient(current => current || items.find(item => item.recipient_key !== "owner-refund")?.recipient_key || "");
       })
       .catch(err => setError(err instanceof Error ? err.message : "Unable to load recipients."));
     fetch("/api/policy")
