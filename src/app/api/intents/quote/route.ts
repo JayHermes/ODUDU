@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       const user = { id: session.user.id, name: session.user.name };
       const context = await getBusinessContext(user);
       const refundWallet = context.recipients.find(item => item.recipient_key === "owner-refund");
-      if (!refundWallet || refundWallet.destination_address !== parsed.data.refundTo) {
+      if (!refundWallet || refundWallet.destination_address !== parsed.data.refundTo || (parsed.data.originAsset.startsWith("nep141:") && refundWallet.chain_id !== "near:testnet")) {
         return NextResponse.json({ error: "Set and use your business owner-refund wallet before creating a live quote." }, { status: 403 });
       }
       const policy = await evaluateBusinessPayment(user, payment.data, "address");
