@@ -6,6 +6,8 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     const params = new URL(request.url).searchParams;
     const parsed = statusInputSchema.safeParse({
       depositAddress: params.get("depositAddress"),
