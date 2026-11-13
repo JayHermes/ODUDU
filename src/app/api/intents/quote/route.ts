@@ -38,6 +38,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Policy recipient must exactly match the Tidepool destination." }, { status: 403 });
       }
       const user = { id: session.user.id, name: session.user.name };
+      const context = await getBusinessContext(user);
+      const refundWallet = context.recipients.find(item => item.recipient_key === "owner-refund");
+      if (!refundWallet || refundWallet.destination_address !== parsed.data.refundTo) {
+        return NextResponse.json({ error: "Set and use your business owner-refund wallet before creating a live quote." }, { status: 403 });
+      }
       const policy = await evaluateBusinessPayment(user, payment.data, "address");
       if (policy.decision === "rejected") {
         return NextResponse.json({ error: "This payment was rejected by Odudu policy. A live quote has not been created.", policy }, { status: 403 });
@@ -47,7 +52,6 @@ export async function POST(request: Request) {
         if (!approvalId) {
           return NextResponse.json({ error: "Human approval is required before a live quote can be created.", policy }, { status: 403 });
         }
-        const context = await getBusinessContext(user);
         const approved = await context.sql`
           SELECT id
           FROM public.payment_approvals
